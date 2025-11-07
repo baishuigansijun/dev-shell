@@ -1,34 +1,31 @@
 <#
-Dev Shell Bootstrap (no fzf / PSFzf)
+Dev Shell Bootstrap (clean version, no fzf / no Linux commands)
 
 适用：
 - Windows 10/11: 在 PowerShell / pwsh 中运行
 - Linux/macOS: 在 pwsh 中运行（建议已安装 PowerShell 7）
 
 功能：
-- 安装 / 检查：
+- 自动安装 / 检查：
     - PowerShell 7（仅 Windows，从 5.1 升级）
     - Oh My Posh
     - zoxide
     - PSReadLine
-    - (Linux) tmux（轻量多窗口）
-- 写入统一 PowerShell Profile（追加）：
+- 写入统一 PowerShell Profile（追加，不清空）：
     - Oh My Posh 使用 "amro" 主题（不存在则回退默认）
     - PSReadLine 智能历史预测
-    - zoxide: z 关键字智能 cd
-    - Linux: 可选的 systemctl / journalctl 快捷函数
+    - zoxide 智能 cd (z 命令)
 #>
 
 $ErrorActionPreference = "Stop"
-
 Write-Host "=== Dev Shell Bootstrap ===" -ForegroundColor Cyan
 
-# ---------- 平台检测（不用内置只读常量名，避免冲突） ----------
+# ---------- 平台检测 ----------
 $devShellIsWindowsSys = $false
 $devShellIsLinuxSys   = $false
 $devShellIsMacSys     = $false
 
-if ($PSVersionTable.PSEdition -eq 'Core' -and $PSVersionTable.OS) {
+try {
     $os = $PSVersionTable.OS
     if ($os -like '*Windows*') {
         $devShellIsWindowsSys = $true
@@ -37,9 +34,10 @@ if ($PSVersionTable.PSEdition -eq 'Core' -and $PSVersionTable.OS) {
     } elseif ($os -like '*Darwin*' -or $os -like '*macOS*') {
         $devShellIsMacSys = $true
     }
-} elseif ($env:OS -like '*Windows*') {
-    # 兼容 Windows PowerShell 5.1
-    $devShellIsWindowsSys = $true
+} catch {
+    if ($env:OS -like '*Windows*') {
+        $devShellIsWindowsSys = $true
+    }
 }
 
 $platform = if ($devShellIsWindowsSys) { 'Windows' } elseif ($devShellIsLinuxSys) { 'Linux' } elseif ($devShellIsMacSys) { 'macOS' } else { 'Unknown' }
@@ -50,7 +48,7 @@ function Ensure-Command {
     return [bool](Get-Command $Name -ErrorAction SilentlyContinue)
 }
 
-# ---------- Windows: 安装 PowerShell 7（从 5.1 升级） ----------
+# ---------- Windows: 安装 PowerShell 7 ----------
 if ($devShellIsWindowsSys -and $PSVersionTable.PSVersion.Major -lt 7) {
     if (Ensure-Command "winget") {
         Write-Host "[*] 检测到 Windows PowerShell，使用 winget 安装 PowerShell 7..."
@@ -120,24 +118,10 @@ function Ensure-PSReadLine {
     }
 }
 
-# ---------- Linux: 安装 tmux（可选，多窗口） ----------
-function Install-Tmux {
-    if (-not $devShellIsLinuxSys) { return }
-    if (Ensure-Command "tmux") {
-        Write-Host "[+] tmux 已存在。"
-        return
-    }
-    if (Ensure-Command "apt") {
-        Write-Host "[*] 安装 tmux (apt)..."
-        sudo apt install -y tmux
-    }
-}
-
 # ---------- 执行安装 ----------
 Install-OhMyPosh
 Install-Zoxide
 Ensure-PSReadLine
-Install-Tmux
 
 # ---------- 写入统一 Profile ----------
 Write-Host "[*] 配置 PowerShell Profile..."
@@ -178,7 +162,7 @@ if (Get-Command oh-my-posh -ErrorAction SilentlyContinue) {
     }
 }
 
-# zoxide: 智能 cd (z 关键字)
+# zoxide: 智能 cd (z 命令)
 if (Get-Command zoxide -ErrorAction SilentlyContinue) {
     Invoke-Expression (& { (zoxide init pwsh | Out-String) })
 }
@@ -192,5 +176,5 @@ Set-Content -Path $profilePath -Value $newProfile -Encoding UTF8
 Write-Host "[+] 已写入 Profile: $profilePath" -ForegroundColor Green
 Write-Host ""
 Write-Host "完成：" -ForegroundColor Cyan
-Write-Host " - 重启 PowerShell / 在服务器上运行 'pwsh' 生效" -ForegroundColor Cyan
-Write-Host " - Linux 可用：sstatus / srestart / sjournal / sjournalerr / tmx（如不需要可手动删掉该块）" -ForegroundColor Cyan
+Write-Host " - 重启 PowerShell / 运行 'pwsh' 生效" -ForegroundColor Cyan
+Write-Host " - 现已启用：Oh My Posh、zoxide、PSReadLine 智能提示" -ForegroundColor Cyan
