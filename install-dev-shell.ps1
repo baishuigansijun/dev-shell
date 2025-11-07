@@ -27,21 +27,21 @@ $ErrorActionPreference = "Stop"
 Write-Host "=== Dev Shell Bootstrap ===" -ForegroundColor Cyan
 
 # ---------- 平台检测（不依赖只读 $IsWindows 等） ----------
-$isWindows = $false
-$isLinux   = $false
-$isMacOS   = $false
+$isWindowsSys = $false
+$isLinuxSys   = $false
+$isMacOSSys   = $false
 
 if ($PSVersionTable.PSEdition -eq 'Core' -and $PSVersionTable.OS) {
     $os = $PSVersionTable.OS
-    if ($os -like '*Windows*') { $isWindows = $true }
-    elseif ($os -like '*Linux*') { $isLinux = $true }
-    elseif ($os -like '*Darwin*' -or $os -like '*macOS*') { $isMacOS = $true }
+    if ($os -like '*Windows*') { $isWindowsSys = $true }
+    elseif ($os -like '*Linux*') { $isLinuxSys = $true }
+    elseif ($os -like '*Darwin*' -or $os -like '*macOS*') { $isMacOSSys = $true }
 } else {
     # 兼容 Windows PowerShell 5.1
-    if ($env:OS -like '*Windows*') { $isWindows = $true }
+    if ($env:OS -like '*Windows*') { $isWindowsSys = $true }
 }
 
-$platform = if ($isWindows) { 'Windows' } elseif ($isLinux) { 'Linux' } elseif ($isMacOS) { 'macOS' } else { 'Unknown' }
+$platform = if ($isWindowsSys) { 'Windows' } elseif ($isLinuxSys) { 'Linux' } elseif ($isMacOSSys) { 'macOS' } else { 'Unknown' }
 Write-Host "[+] 检测到平台: $platform"
 
 function Ensure-Command {
@@ -50,7 +50,7 @@ function Ensure-Command {
 }
 
 # ---------- 安装 PowerShell 7（仅 Windows，从 5.1 升级） ----------
-if ($isWindows -and $PSVersionTable.PSVersion.Major -lt 7) {
+if ($isWindowsSys -and $PSVersionTable.PSVersion.Major -lt 7) {
     if (Ensure-Command "winget") {
         Write-Host "[*] 检测到 Windows PowerShell，使用 winget 安装 PowerShell 7..."
         try {
@@ -72,11 +72,11 @@ function Install-OhMyPosh {
         return
     }
 
-    if ($isWindows -and (Ensure-Command "winget")) {
+    if ($isWindowsSys -and (Ensure-Command "winget")) {
         Write-Host "[*] 安装 Oh My Posh (winget)..."
         winget install JanDeDobbeleer.OhMyPosh -s winget -h
     }
-    elseif (($isLinux -or $isMacOS) -and (Ensure-Command "curl")) {
+    elseif (($isLinuxSys -or $isMacOSSys) -and (Ensure-Command "curl")) {
         Write-Host "[*] 安装 Oh My Posh (官方脚本)..."
         curl -s https://ohmyposh.dev/install.sh | bash -s
     }
@@ -92,15 +92,15 @@ function Install-Fzf {
         return
     }
 
-    if ($isWindows -and (Ensure-Command "winget")) {
+    if ($isWindowsSys -and (Ensure-Command "winget")) {
         Write-Host "[*] 安装 fzf (winget)..."
         winget install Junegunn.Fzf -s winget -h
     }
-    elseif ($isLinux -and (Ensure-Command "apt")) {
+    elseif ($isLinuxSys -and (Ensure-Command "apt")) {
         Write-Host "[*] 安装 fzf (apt)..."
         sudo apt update && sudo apt install -y fzf
     }
-    elseif ($isMacOS -and (Ensure-Command "brew")) {
+    elseif ($isMacOSSys -and (Ensure-Command "brew")) {
         Write-Host "[*] 安装 fzf (brew)..."
         brew install fzf
     }
@@ -116,7 +116,7 @@ function Install-Zoxide {
         return
     }
 
-    if ($isWindows -and (Ensure-Command "winget")) {
+    if ($isWindowsSys -and (Ensure-Command "winget")) {
         Write-Host "[*] 安装 zoxide (winget)..."
         winget install ajeetdsouza.zoxide -s winget -h
     }
@@ -158,7 +158,7 @@ function Ensure-PSFzf {
 
 # ---------- Linux: 安装 tmux（轻量多窗口） ----------
 function Install-Tmux {
-    if (-not $isLinux) { return }
+    if (-not $isLinuxSys) { return }
     if (Ensure-Command "tmux") {
         Write-Host "[+] tmux 已存在。"
         return
@@ -228,7 +228,7 @@ if (Get-Module -ListAvailable -Name PSFzf) {
 }
 
 # Linux 专用：简化 systemctl / journalctl
-if ($isLinux) {
+if ($isLinuxSys) {
     function sstatus {
         param([Parameter(Mandatory = $true)][string]$Name)
         sudo systemctl status $Name
