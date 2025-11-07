@@ -27,9 +27,17 @@ $ErrorActionPreference = "Stop"
 Write-Host "=== Dev Shell Bootstrap ===" -ForegroundColor Cyan
 
 # 容错处理 IsWindows/IsLinux/IsMacOS（在老环境可能不存在）
-$isWindows = (Get-Variable IsWindows -ErrorAction SilentlyContinue)?.Value -eq $true
-$isLinux   = (Get-Variable IsLinux   -ErrorAction SilentlyContinue)?.Value -eq $true
-$isMacOS   = (Get-Variable IsMacOS   -ErrorAction SilentlyContinue)?.Value -eq $true
+try {
+    $isWindows = $IsWindows
+    $isLinux   = $IsLinux
+    $isMacOS   = $IsMacOS
+} catch {
+    # PowerShell 5.1 没有这些变量时回退判断
+    $os = $PSVersionTable.OS
+    $isWindows = $os -like "*Windows*"
+    $isLinux   = $os -like "*Linux*"
+    $isMacOS   = $os -like "*Darwin*"
+}
 
 if (-not ($isWindows -or $isLinux -or $isMacOS)) {
     # 简单兜底
