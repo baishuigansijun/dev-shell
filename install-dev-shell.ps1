@@ -1,5 +1,5 @@
 <#
-Dev Shell Bootstrap
+Dev Shell Bootstrap (no fzf / PSFzf)
 
 适用：
 - Windows 10/11: 在 PowerShell / pwsh 中运行
@@ -7,41 +7,42 @@ Dev Shell Bootstrap
 
 功能：
 - 安装 / 检查：
-    - PowerShell 7（仅 Windows，方便从 5.1 升级）
+    - PowerShell 7（仅 Windows，从 5.1 升级）
     - Oh My Posh
-    - fzf
     - zoxide
     - PSReadLine
-    - PSFzf
     - (Linux) tmux（轻量多窗口）
-- 写入统一 PowerShell Profile（追加，不粗暴清空）：
+- 写入统一 PowerShell Profile（追加）：
     - Oh My Posh 使用 "amro" 主题（不存在则回退默认）
     - PSReadLine 智能历史预测
-    - fzf + PSFzf: Ctrl+T 文件 / Ctrl+R 历史
     - zoxide: z 关键字智能 cd
-    - Linux: systemctl / journalctl 快捷函数
+    - Linux: 可选的 systemctl / journalctl 快捷函数
 #>
 
 $ErrorActionPreference = "Stop"
 
 Write-Host "=== Dev Shell Bootstrap ===" -ForegroundColor Cyan
 
-# ---------- 平台检测（不依赖只读 $IsWindows 等） ----------
-$isWindowsSys = $false
-$isLinuxSys   = $false
-$isMacOSSys   = $false
+# ---------- 平台检测（不用内置只读常量名，避免冲突） ----------
+$devShellIsWindowsSys = $false
+$devShellIsLinuxSys   = $false
+$devShellIsMacSys     = $false
 
 if ($PSVersionTable.PSEdition -eq 'Core' -and $PSVersionTable.OS) {
     $os = $PSVersionTable.OS
-    if ($os -like '*Windows*') { $isWindowsSys = $true }
-    elseif ($os -like '*Linux*') { $isLinuxSys = $true }
-    elseif ($os -like '*Darwin*' -or $os -like '*macOS*') { $isMacOSSys = $true }
-} else {
+    if ($os -like '*Windows*') {
+        $devShellIsWindowsSys = $true
+    } elseif ($os -like '*Linux*') {
+        $devShellIsLinuxSys = $true
+    } elseif ($os -like '*Darwin*' -or $os -like '*macOS*') {
+        $devShellIsMacSys = $true
+    }
+} elseif ($env:OS -like '*Windows*') {
     # 兼容 Windows PowerShell 5.1
-    if ($env:OS -like '*Windows*') { $isWindowsSys = $true }
+    $devShellIsWindowsSys = $true
 }
 
-$platform = if ($isWindowsSys) { 'Windows' } elseif ($isLinuxSys) { 'Linux' } elseif ($isMacOSSys) { 'macOS' } else { 'Unknown' }
+$platform = if ($devShellIsWindowsSys) { 'Windows' } elseif ($devShellIsLinuxSys) { 'Linux' } elseif ($devShellIsMacSys) { 'macOS' } else { 'Unknown' }
 Write-Host "[+] 检测到平台: $platform"
 
 function Ensure-Command {
@@ -49,8 +50,8 @@ function Ensure-Command {
     return [bool](Get-Command $Name -ErrorAction SilentlyContinue)
 }
 
-# ---------- 安装 PowerShell 7（仅 Windows，从 5.1 升级） ----------
-if ($isWindowsSys -and $PSVersionTable.PSVersion.Major -lt 7) {
+# ---------- Windows: 安装 PowerShell 7（从 5.1 升级） ----------
+if ($devShellIsWindowsSys -and $PSVersionTable.PSVersion.Major -lt 7) {
     if (Ensure-Command "winget") {
         Write-Host "[*] 检测到 Windows PowerShell，使用 winget 安装 PowerShell 7..."
         try {
@@ -72,40 +73,16 @@ function Install-OhMyPosh {
         return
     }
 
-    if ($isWindowsSys -and (Ensure-Command "winget")) {
+    if ($devShellIsWindowsSys -and (Ensure-Command "winget")) {
         Write-Host "[*] 安装 Oh My Posh (winget)..."
         winget install JanDeDobbeleer.OhMyPosh -s winget -h
     }
-    elseif (($isLinuxSys -or $isMacOSSys) -and (Ensure-Command "curl")) {
+    elseif (($devShellIsLinuxSys -or $devShellIsMacSys) -and (Ensure-Command "curl")) {
         Write-Host "[*] 安装 Oh My Posh (官方脚本)..."
         curl -s https://ohmyposh.dev/install.sh | bash -s
     }
     else {
-        Write-Warning "无法自动安装 Oh My Posh，请参考官网：https://ohmyposh.dev"
-    }
-}
-
-# ---------- 安装 fzf ----------
-function Install-Fzf {
-    if (Ensure-Command "fzf") {
-        Write-Host "[+] fzf 已存在。"
-        return
-    }
-
-    if ($isWindowsSys -and (Ensure-Command "winget")) {
-        Write-Host "[*] 安装 fzf (winget)..."
-        winget install Junegunn.Fzf -s winget -h
-    }
-    elseif ($isLinuxSys -and (Ensure-Command "apt")) {
-        Write-Host "[*] 安装 fzf (apt)..."
-        sudo apt update && sudo apt install -y fzf
-    }
-    elseif ($isMacOSSys -and (Ensure-Command "brew")) {
-        Write-Host "[*] 安装 fzf (brew)..."
-        brew install fzf
-    }
-    else {
-        Write-Warning "请根据系统手动安装 fzf。"
+        Write-Warning "无法自动安装 Oh My Posh，请参考：https://ohmyposh.dev"
     }
 }
 
@@ -116,7 +93,7 @@ function Install-Zoxide {
         return
     }
 
-    if ($isWindowsSys -and (Ensure-Command "winget")) {
+    if ($devShellIsWindowsSys -and (Ensure-Command "winget")) {
         Write-Host "[*] 安装 zoxide (winget)..."
         winget install ajeetdsouza.zoxide -s winget -h
     }
@@ -129,7 +106,7 @@ function Install-Zoxide {
     }
 }
 
-# ---------- 确保 PSReadLine / PSFzf ----------
+# ---------- 确保 PSReadLine ----------
 function Ensure-PSReadLine {
     if (Get-Module -ListAvailable -Name PSReadLine) {
         Write-Host "[+] PSReadLine 可用。"
@@ -143,22 +120,9 @@ function Ensure-PSReadLine {
     }
 }
 
-function Ensure-PSFzf {
-    if (Get-Module -ListAvailable -Name PSFzf) {
-        Write-Host "[+] PSFzf 可用。"
-        return
-    }
-    try {
-        Write-Host "[*] 安装 PSFzf..."
-        Install-Module -Name PSFzf -Scope CurrentUser -Force -AllowClobber
-    } catch {
-        Write-Warning "PSFzf 安装失败（可选）：$($_.Exception.Message)"
-    }
-}
-
-# ---------- Linux: 安装 tmux（轻量多窗口） ----------
+# ---------- Linux: 安装 tmux（可选，多窗口） ----------
 function Install-Tmux {
-    if (-not $isLinuxSys) { return }
+    if (-not $devShellIsLinuxSys) { return }
     if (Ensure-Command "tmux") {
         Write-Host "[+] tmux 已存在。"
         return
@@ -171,10 +135,8 @@ function Install-Tmux {
 
 # ---------- 执行安装 ----------
 Install-OhMyPosh
-Install-Fzf
 Install-Zoxide
 Ensure-PSReadLine
-Ensure-PSFzf
 Install-Tmux
 
 # ---------- 写入统一 Profile ----------
@@ -207,7 +169,7 @@ Set-PSReadLineOption -PredictionSource History
 Set-PSReadLineOption -PredictionViewStyle ListView
 Set-PSReadLineOption -EditMode Windows
 
-# Oh My Posh: 优先使用 amro 主题，不存在则使用默认
+# Oh My Posh: 尝试使用 amro 主题，不存在则回退默认
 if (Get-Command oh-my-posh -ErrorAction SilentlyContinue) {
     try {
         oh-my-posh init pwsh --config "amro" | Invoke-Expression
@@ -221,28 +183,38 @@ if (Get-Command zoxide -ErrorAction SilentlyContinue) {
     Invoke-Expression (& { (zoxide init pwsh | Out-String) })
 }
 
-# fzf + PSFzf: Ctrl+T 文件搜索 / Ctrl+R 历史搜索
-if (Get-Module -ListAvailable -Name PSFzf) {
-    Import-Module PSFzf -ErrorAction SilentlyContinue
-    Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r'
+# Linux 系统上提供轻量快捷命令（可按需删除）
+# sstatus nginx      -> systemctl status nginx
+# srestart nginx     -> systemctl restart nginx
+# sjournal nginx     -> tail 跟踪日志
+# sjournalerr nginx  -> 最近错误日志
+$devShellIsLinuxLocal = $false
+if ($PSVersionTable.PSEdition -eq 'Core' -and $PSVersionTable.OS -like '*Linux*') {
+    $devShellIsLinuxLocal = $true
 }
-
-# Linux 专用：简化 systemctl / journalctl
-if ($isLinuxSys) {
+if ($devShellIsLinuxLocal) {
     function sstatus {
-        param([Parameter(Mandatory = $true)][string]$Name)
+        param(
+            [Parameter(Mandatory = $true)][string]$Name
+        )
         sudo systemctl status $Name
     }
     function srestart {
-        param([Parameter(Mandatory = $true)][string]$Name)
+        param(
+            [Parameter(Mandatory = $true)][string]$Name
+        )
         sudo systemctl restart $Name
     }
     function sjournal {
-        param([Parameter(Mandatory = $true)][string]$Name)
+        param(
+            [Parameter(Mandatory = $true)][string]$Name
+        )
         sudo journalctl -u $Name -e -f
     }
     function sjournalerr {
-        param([Parameter(Mandatory = $true)][string]$Name)
+        param(
+            [Parameter(Mandatory = $true)][string]$Name
+        )
         sudo journalctl -u $Name -p err -n 100
     }
     if (Get-Command tmux -ErrorAction SilentlyContinue) {
@@ -259,5 +231,5 @@ Set-Content -Path $profilePath -Value $newProfile -Encoding UTF8
 Write-Host "[+] 已写入 Profile: $profilePath" -ForegroundColor Green
 Write-Host ""
 Write-Host "完成：" -ForegroundColor Cyan
-Write-Host " - 重新打开 PowerShell / 在服务器上运行 'pwsh' 生效" -ForegroundColor Cyan
-Write-Host " - Linux 下可用：sstatus / srestart / sjournal / sjournalerr / tmx" -ForegroundColor Cyan
+Write-Host " - 重启 PowerShell / 在服务器上运行 'pwsh' 生效" -ForegroundColor Cyan
+Write-Host " - Linux 可用：sstatus / srestart / sjournal / sjournalerr / tmx（如不需要可手动删掉该块）" -ForegroundColor Cyan
