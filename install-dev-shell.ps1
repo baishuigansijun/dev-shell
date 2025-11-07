@@ -183,45 +183,6 @@ if (Get-Command zoxide -ErrorAction SilentlyContinue) {
     Invoke-Expression (& { (zoxide init pwsh | Out-String) })
 }
 
-# Linux 系统上提供轻量快捷命令（可按需删除）
-# sstatus nginx      -> systemctl status nginx
-# srestart nginx     -> systemctl restart nginx
-# sjournal nginx     -> tail 跟踪日志
-# sjournalerr nginx  -> 最近错误日志
-$devShellIsLinuxLocal = $false
-if ($PSVersionTable.PSEdition -eq 'Core' -and $PSVersionTable.OS -like '*Linux*') {
-    $devShellIsLinuxLocal = $true
-}
-if ($devShellIsLinuxLocal) {
-    function sstatus {
-        param(
-            [Parameter(Mandatory = $true)][string]$Name
-        )
-        sudo systemctl status $Name
-    }
-    function srestart {
-        param(
-            [Parameter(Mandatory = $true)][string]$Name
-        )
-        sudo systemctl restart $Name
-    }
-    function sjournal {
-        param(
-            [Parameter(Mandatory = $true)][string]$Name
-        )
-        sudo journalctl -u $Name -e -f
-    }
-    function sjournalerr {
-        param(
-            [Parameter(Mandatory = $true)][string]$Name
-        )
-        sudo journalctl -u $Name -p err -n 100
-    }
-    if (Get-Command tmux -ErrorAction SilentlyContinue) {
-        Set-Alias tmx tmux
-    }
-}
-
 $markerEnd
 "@
 
