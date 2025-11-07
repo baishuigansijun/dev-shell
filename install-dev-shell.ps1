@@ -196,7 +196,7 @@ if ($isLinuxFlag -or $isMacOSFlag) {
     if (Test-Path $localBin) {
         $paths = $env:PATH -split ':'
         if ($paths -notcontains $localBin) {
-            $env:PATH = "$localBin:" + $env:PATH
+            $env:PATH = "${localBin}:" + $env:PATH
         }
     }
 }
