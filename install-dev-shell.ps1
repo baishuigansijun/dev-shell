@@ -11,7 +11,7 @@ Dev Shell Bootstrap (clean version, no fzf / no Linux commands)
     - Oh My Posh
     - zoxide
     - PSReadLine
-- 写入统一 PowerShell Profile（追加，不清空）：
+- 写入统一 PowerShell Profile（追加，不清空原有其它设置）：
     - Oh My Posh 使用 "amro" 主题（不存在则回退默认）
     - PSReadLine 智能历史预测
     - zoxide 智能 cd (z 命令)
@@ -140,6 +140,12 @@ if (Test-Path $profilePath) {
     $old = Get-Content $profilePath -Raw
 }
 
+# 防止 $old 为 $null
+if ($null -eq $old) {
+    $old = ""
+}
+
+# 去掉旧的 dev-shell 配置块
 if ($old -match [regex]::Escape($markerStart)) {
     $old = $old -replace "$([regex]::Escape($markerStart)).*?$([regex]::Escape($markerEnd))", ""
 }
@@ -153,7 +159,7 @@ Set-PSReadLineOption -PredictionSource History
 Set-PSReadLineOption -PredictionViewStyle ListView
 Set-PSReadLineOption -EditMode Windows
 
-# Oh My Posh: 尝试使用 amro 主题，不存在则回退默认
+# Oh My Posh: 尝试使用 amro 主题，不存在则回退默认配置
 if (Get-Command oh-my-posh -ErrorAction SilentlyContinue) {
     try {
         oh-my-posh init pwsh --config "amro" | Invoke-Expression
@@ -170,11 +176,11 @@ if (Get-Command zoxide -ErrorAction SilentlyContinue) {
 $markerEnd
 "@
 
-$newProfile = ($old.TrimEnd(), "", $devShellBlock.Trim()) -join "`n"
+$newProfile = (([string]$old).TrimEnd(), "", $devShellBlock.Trim()) -join "`n"
 Set-Content -Path $profilePath -Value $newProfile -Encoding UTF8
 
 Write-Host "[+] 已写入 Profile: $profilePath" -ForegroundColor Green
 Write-Host ""
 Write-Host "完成：" -ForegroundColor Cyan
 Write-Host " - 重启 PowerShell / 运行 'pwsh' 生效" -ForegroundColor Cyan
-Write-Host " - 现已启用：Oh My Posh、zoxide、PSReadLine 智能提示" -ForegroundColor Cyan
+Write-Host " - 功能：Oh My Posh 主题 + PSReadLine 智能提示 + zoxide 智能 cd" -ForegroundColor Cyan
