@@ -11,10 +11,10 @@
 
 ```bash
 bash <(curl -s https://raw.githubusercontent.com/baishuigansijun/dev-shell/main/bootstrap.sh)
-
+```
 ---
 
 ## Windows
-```bash
-irm https://raw.githubusercontent.com/baishuigansijun/dev-shell/main/bootstrap.ps1 | iex
-
+```poweshell
+irm https://raw.githubusercontent.com/baishuigansijun/dev-shell/main/install-dev-shell.ps1 | iex
+```
