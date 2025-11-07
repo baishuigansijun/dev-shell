@@ -185,10 +185,10 @@ Set-PSReadLineOption -PredictionSource History
 Set-PSReadLineOption -PredictionViewStyle ListView
 Set-PSReadLineOption -EditMode Windows
 
-# Linux/macOS: 确保 ~/.local/bin 在 PATH 中（zoxide / oh-my-posh 默认安装位置）
+# Linux/macOS: 确保 ~/.local/bin 在 PATH 中
 try {
-    $isLinuxFlag  = (Get-Variable -Name IsLinux  -ErrorAction SilentlyContinue -ValueOnly)
-    $isMacOSFlag  = (Get-Variable -Name IsMacOS  -ErrorAction SilentlyContinue -ValueOnly)
+    $isLinuxFlag = (Get-Variable -Name IsLinux -ErrorAction SilentlyContinue -ValueOnly)
+    $isMacOSFlag = (Get-Variable -Name IsMacOS -ErrorAction SilentlyContinue -ValueOnly)
 } catch { }
 
 if ($isLinuxFlag -or $isMacOSFlag) {
@@ -201,18 +201,21 @@ if ($isLinuxFlag -or $isMacOSFlag) {
     }
 }
 
-# Oh My Posh: 优先使用 amro 主题，不存在则回退默认配置
+# Oh My Posh
 if (Get-Command oh-my-posh -ErrorAction SilentlyContinue) {
     try {
-        oh-my-posh init pwsh --config "amro" | Invoke-Expression
+        oh-my-posh init powershell --config "amro" | Invoke-Expression
     } catch {
-        oh-my-posh init pwsh | Invoke-Expression
+        oh-my-posh init powershell | Invoke-Expression
     }
 }
 
-# zoxide: 智能 cd (z 命令)
+# zoxide
 if (Get-Command zoxide -ErrorAction SilentlyContinue) {
-    Invoke-Expression (& { (zoxide init pwsh | Out-String) })
+    $zInit = zoxide init powershell | Out-String
+    if ($zInit) {
+        Invoke-Expression $zInit
+    }
 }
 
 # <<< dev-shell profile <<<
